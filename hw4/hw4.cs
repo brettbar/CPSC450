@@ -21,23 +21,29 @@ values v1,v2,...vn, and a knapsack of capactiy W. Find the most
 valuable subset of items that fit into the knapsack.
 */
 
+// Full disclosure I received help from these sources (C#)
+// https://stackoverflow.com/questions/969290/exact-time-measurement-for-performance-testing - For time stuff
+// https://www.tutorialspoint.com/Way-to-read-input-from-console-in-Chash - For input stuff
+
+/*
+  Analysis:
+    When running my tests on the different algorithms, I found for small test instances
+    the difference to be negligble.
+
+
+*/
+
+
 using System;
 using System.Diagnostics;
 
 
 public class hw4 {
   public static void Main() {
-      // int [] val = new int[]{60, 100, 120};
-      // int [] wt = new int[]{10, 20, 30};
-      // int W = 50;
-      // int n = val.Length;
-
       char algChoice;
       algChoice = Convert.ToChar(Console.ReadLine());
-
       int capacity;
       capacity = Convert.ToInt32(Console.ReadLine());
-
       int numItems;
       numItems = Convert.ToInt32(Console.ReadLine());
 
@@ -49,86 +55,93 @@ public class hw4 {
         costs[i] = Convert.ToInt32(Console.ReadLine());
       }
 
-      Console.WriteLine(d(capacity, weights, costs, numItems));
-      Console.WriteLine(buildMatrix(capacity, weights, costs, numItems));
-  }
-  
-  public static int max(int a, int b) {
-    if (a >= b)
-      return a;
-    else return b;
-  }
-
-  public static int d(int capacity, int []weights, int []costs, int numItems) {
-    // Initials condition (8.7)
-    if (numItems == 0) return 0;
-    if (capacity == 0) return 0;
-
-    // We can't have a weight that is greater than the maximum capacity
-    if (weights[numItems-1] > capacity) return d(capacity, weights, costs, numItems-1);
-
-    // Return the maximum of two cases:
-    // (1) nth item included
-    // (2) not included
-    else {
-      return max(costs[numItems-1] + d(capacity-weights[numItems-1], weights, costs, numItems-1), d(capacity, weights, costs, numItems-1));
-    }
-  }
-
-  public static int buildMatrix(int capacity, int []weights, int []costs, int numItems) {
-        int [,]matrix = new int[numItems+1,capacity+1];
-
-        // Build table K[][] in bottom
-        // up manner
+      if (algChoice == 'd') {
+        Stopwatch sw1 = new Stopwatch();
+        sw1.Start();
+        Console.WriteLine(d(numItems, capacity, weights, costs));
+        sw1.Stop();
+        Console.WriteLine("algorithm d elapsed time={0}",sw1.Elapsed);
+      } else if (algChoice == 'f') {
+        // For algorithm f
+        // This matrix is non-memoization approach to dynamic programming.
+        int [,]memo_matrix = new int[numItems+1, capacity+1];
         for (int i = 0; i <= numItems; i++) {
-            for (int w = 0; w <= capacity; w++) {
-                if (i == 0 || w == 0)
-                    matrix[i,w] = 0;
-                else if (weights[i-1] <= w)
-                    matrix[i,w] = Math.Max(costs[i-1] + matrix[i-1,w-weights[i-1]], matrix[i-1,w]);
+            for (int j = 0; j <= capacity; j++) {
+                if (i == 0 || j == 0)
+                    memo_matrix[i,j] = 0;
                 else
-                    matrix[i,w] = matrix[i-1,w];
+                  memo_matrix[i,j] = -1;
             }
         }
-        return matrix[numItems,capacity];
+        Stopwatch sw2 = new Stopwatch();
+        sw2.Start();
+        Console.WriteLine(f(numItems, capacity, weights, costs, memo_matrix));
+        sw2.Stop();
+        Console.WriteLine("algorithm f elapsed time={0}",sw2.Elapsed);
+      } else {
+        System.Environment.Exit(1);
+      }
   }
 
+  public static int d(int numItems, int capacity, int[] weights, int[] costs) {
+    // For algorithm d
+    // This matrix is non-memoization approach to dynamic programming.
+    int [,]matrix = new int[numItems+1,capacity+1];
+    // Construct the 2d table with number of items as the left axis
+    // and capacities as the top axis (as discussed on the quiz)
 
-  public static int f(int capacity, int []weights, int []costs, int numItems) {
-     return buildMatrix(capacity, weights, costs, numItems);
-
-    // for (int i = 0; i < numItems; i++) {
-    //   for (int j = 0; j < capacity; j++) {
-    //     if (i == 0 || j == 0)
-    //       matrix[i,j] = 0;
-    //     else if (weights[i-1] <= j)
-    //       matrix[i,j] = max(costs[i-1] + matrix[i-1, capacity - weights[i-1]], matrix[i-1, capacity]);
-    //     else
-    //       matrix[i,j] = matrix[i-1, capacity];
-    //   }
-    // }
-    // return matrix[numItems, capacity];
-    //return f_rec(capacity, weights, costs, numItems, matrix);
+    for (int i = 0; i <= numItems; i++) {
+        for (int j = 0; j <= capacity; j++) {
+            if (i == 0 || j == 0)
+                matrix[i,j] = 0;
+            else if (weights[i-1] <= j)
+                matrix[i,j] = max(costs[i-1] + matrix[i-1,j-weights[i-1]], matrix[i-1,j]);
+            else
+                matrix[i,j] = matrix[i-1,j];
+        }
+    }
+    return matrix[numItems, capacity];
   }
 
-  public static int f_rec(int capacity, int []weights, int []costs, int numItems, int[,] matrix) {
+  public static int f(int numItems, int capacity, int[] weights, int[] costs, int[,] memo_matrix) {
+    return memory_func(capacity, weights, costs, numItems, memo_matrix);
+  }
 
+  // This is heavily influenced by the pseudocode on page 295 of the book
+  public static int memory_func(int capacity, int[] weights, int[] costs, int numItems, int[,] matrix) {
     if (matrix[numItems, capacity] < 0) {
       int value;
-      if (capacity < weights[numItems])
-        value = f_rec(capacity, weights, costs, numItems - 1, matrix);
+      if (capacity < weights[numItems - 1])
+        value = memory_func(capacity, weights, costs, numItems - 1, matrix);
       else
-        value = max(f_rec(capacity, weights, costs, numItems - 1, matrix), costs[numItems] + f_rec(capacity - weights[numItems], weights, costs, numItems -1, matrix));
-      Console.WriteLine(value);
+        value = max(memory_func(capacity, weights, costs, numItems - 1, matrix), costs[numItems - 1] + memory_func(capacity - weights[numItems -1 ], weights, costs, numItems -1, matrix));
       matrix[numItems, capacity] = value;
     }
     return matrix[numItems, capacity];
   }
 
 
+
+  public static int max(int a, int b) {
+    if (a >= b) return a;
+    else return b;
+  }
+
+  public static int sanity_check(int capacity, int []weights, int []costs, int numItems) {
+    // Initials condition (8.7) in the book
+    if (numItems == 0) return 0;
+    if (capacity == 0) return 0;
+
+    // We can't have a weight that is greater than the maximum capacity
+    if (weights[numItems-1] > capacity) return sanity_check(capacity, weights, costs, numItems-1);
+
+    // We either include item n, or we don't, and we will find the larger of these two
+    else {
+      int max_val = max(sanity_check(capacity, weights, costs, numItems-1), costs[numItems-1] + sanity_check(capacity-weights[numItems-1], weights, costs, numItems-1));
+      return max_val;
+    }
+  }
 }
-
-
 
 
 
