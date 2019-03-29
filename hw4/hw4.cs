@@ -25,11 +25,79 @@ valuable subset of items that fit into the knapsack.
 // https://stackoverflow.com/questions/969290/exact-time-measurement-for-performance-testing - For time stuff
 // https://www.tutorialspoint.com/Way-to-read-input-from-console-in-Chash - For input stuff
 
+// I am submitting this a day late, but in your office hours you granted me a 1 day extension
+// (thanks for that by the way!).
+
 /*
   Analysis:
     When running my tests on the different algorithms, I found for small test instances
-    the difference to be negligble.
+    the difference was negligble.
 
+    For the following test instance: {d(or f), 10, 4, 7 ,42, 3, 12, 4, 40, 5, 25}
+    alg d:
+      Items used: 4 3
+      Total value: 65
+      Total weight 9
+      algorithm d elapsed time=00:00:00.0022858
+
+    alg f:
+      Items used: 4 3
+      Total value: 65
+      Total weight 9
+      algorithm f elapsed time=00:00:00.0027286
+      Percent of matrix used: 25.4545454545455
+
+    For a larger test set:
+        50
+        16
+        7
+        42
+        3
+        12
+        4
+        40
+        5
+        25
+        7
+        42
+        3
+        12
+        4
+        40
+        5
+        25
+        7
+        42
+        3
+        12
+        4
+        40
+        5
+        25
+        7
+        42
+        3
+        12
+        4
+        40
+        5
+        25
+
+    alg d:
+      Items used: 15 13 11 9 7 5 4 3 1
+      Total value: 353
+      Total weight 49
+      algorithm d elapsed time=00:00:00.0054550
+    alg f:
+      Items used: 15 13 11 9 7 5 4 3 1
+      Total value: 353
+      Total weight 49
+      algorithm f elapsed time=00:00:00.0032284
+      Percent of matrix used: 52.5951557093426
+
+    Here we start to notice an actual difference between alg f, and alg d.
+    Where as the problem size grows, the memoization algorithm becomes
+    significantly faster, around twice as fast in this instance.
 
 */
 
@@ -58,7 +126,7 @@ public class hw4 {
       if (algChoice == 'd') {
         Stopwatch sw1 = new Stopwatch();
         sw1.Start();
-        Console.WriteLine(d(numItems, capacity, weights, costs));
+        d(numItems, capacity, weights, costs);
         sw1.Stop();
         Console.WriteLine("algorithm d elapsed time={0}",sw1.Elapsed);
       } else if (algChoice == 'f') {
@@ -75,12 +143,39 @@ public class hw4 {
         }
         Stopwatch sw2 = new Stopwatch();
         sw2.Start();
-        Console.WriteLine(f(numItems, capacity, weights, costs, memo_matrix));
+        f(numItems, capacity, weights, costs, memo_matrix);
+        findItemsPicked(memo_matrix, numItems, capacity, weights, costs);
         sw2.Stop();
         Console.WriteLine("algorithm f elapsed time={0}",sw2.Elapsed);
+        Console.WriteLine("Percent of matrix used: " + percentage_used(memo_matrix, numItems, capacity));
       } else {
         System.Environment.Exit(1);
       }
+  }
+
+  public static void findItemsPicked(int[,] matrix, int numItems, int capacity, int[] weights, int[] costs) {
+    // Should go through matrix, find items picked up, output said items
+    int x = numItems;
+    int y = capacity;
+
+    int totalWeight = 0;
+
+    Console.Write("Items used: ");
+    while(matrix[x,y] != 0) {
+      if (matrix[x,y] == matrix[x-1,y]) {
+        x = x - 1;
+        //y=y;
+      } else {
+        int weight = weights[x-1];
+        totalWeight+=weight;
+        x = x -1;
+        y = y - weight;
+        Console.Write(x+1 + " ");
+      }
+    }
+    Console.WriteLine();
+    Console.WriteLine("Total value: " + matrix[numItems, capacity]);
+    Console.WriteLine("Total weight " + totalWeight);
   }
 
   public static int d(int numItems, int capacity, int[] weights, int[] costs) {
@@ -100,6 +195,7 @@ public class hw4 {
                 matrix[i,j] = matrix[i-1,j];
         }
     }
+    findItemsPicked(matrix, numItems, capacity, weights, costs);
     return matrix[numItems, capacity];
   }
 
@@ -120,26 +216,33 @@ public class hw4 {
     return matrix[numItems, capacity];
   }
 
+  public static double percentage_used(int[,] matrix, int numItems, int capacity) {
+    double percent_used = 0.0;
+    int total = 0;
+    int used = 0;
 
+    for (int i = 0; i <= numItems; i++) {
+        for (int j = 0; j <= capacity; j++) {
+          total++;
+          if (i == 0 || j == 0) {
+
+          }
+          else {
+            if (matrix[i,j] != -1)
+              used++;
+          }
+        }
+    }
+
+    percent_used = (double)used / (double)total;
+    percent_used = percent_used * 100.0;
+
+    return percent_used;
+  }
 
   public static int max(int a, int b) {
     if (a >= b) return a;
     else return b;
-  }
-
-  public static int sanity_check(int capacity, int []weights, int []costs, int numItems) {
-    // Initials condition (8.7) in the book
-    if (numItems == 0) return 0;
-    if (capacity == 0) return 0;
-
-    // We can't have a weight that is greater than the maximum capacity
-    if (weights[numItems-1] > capacity) return sanity_check(capacity, weights, costs, numItems-1);
-
-    // We either include item n, or we don't, and we will find the larger of these two
-    else {
-      int max_val = max(sanity_check(capacity, weights, costs, numItems-1), costs[numItems-1] + sanity_check(capacity-weights[numItems-1], weights, costs, numItems-1));
-      return max_val;
-    }
   }
 }
 
